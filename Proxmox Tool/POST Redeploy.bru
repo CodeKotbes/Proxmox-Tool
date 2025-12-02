@@ -1,0 +1,19 @@
+meta {
+  name: POST Redeploy
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/redeploy
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "old_tag": "webserver",
+    "new_template_id": 9001,
+    "new_tag": "webserver-v1"
+  }
+}

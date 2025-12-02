@@ -1,0 +1,20 @@
+meta {
+  name: POST Create Template
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/template
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "vmid": 9000,
+    "name": "ubuntu-template-v1",
+    "image": "/var/lib/vz/template/iso/ubuntu-22.04-cloud.qcow2",
+    "storage": "data-zfs"
+  }
+}
