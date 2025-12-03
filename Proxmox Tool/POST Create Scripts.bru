@@ -1,0 +1,19 @@
+meta {
+  name: POST Create Scripts
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/scripts
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Script.sh",
+    "description": "Prüft ob /dev/sdb formatiert ist. Wenn nein -> mkfs.ext4. Dann mount nach /mnt/data.",
+    "content": "#!/bin/bash\n\n# --- KONFIGURATION ---\nDATA_DISK=\"/dev/sdb\"\nMOUNT_POINT=\"/mnt/data\"\n\n# 1. Warten auf Device\nfor i in {1..10}; do\n    if [ -b \"$DATA_DISK\" ]; then break; fi\n    sleep 1\ndone\n\nif [ ! -b \"$DATA_DISK\" ]; then\n    echo \"FEHLER: Disk $DATA_DISK fehlt!\"\n    exit 1\nfi\n\n# 2. Formatieren falls leer (blkid check)\nif blkid \"$DATA_DISK\" > /dev/null; then\n    echo \"Disk ist bereits formatiert.\"\nelse\n    echo \"Disk ist leer. Formatiere mit ext4...\"\n    mkfs.ext4 -F \"$DATA_DISK\"\nfi\n\n# 3. Mounten\nmkdir -p \"$MOUNT_POINT\"\nmount \"$DATA_DISK\" \"$MOUNT_POINT\"\nchmod 777 \"$MOUNT_POINT\"\n\n# 4. fstab Eintrag\nif ! grep -qs \"$MOUNT_POINT\" /etc/fstab; then\n    UUID=$(blkid -s UUID -o value \"$DATA_DISK\")\n    echo \"UUID=$UUID $MOUNT_POINT ext4 defaults 0 2\" >> /etc/fstab\nfi"
+  }
+}

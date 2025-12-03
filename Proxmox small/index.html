@@ -173,7 +173,7 @@
         
         label { display: block; font-size: 11px; font-weight: 700; color: #777; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        input, select { 
+        input, select, textarea { 
             width: 100%; 
             background-color: var(--input-bg); 
             border: 1px solid var(--border-color); 
@@ -183,12 +183,13 @@
             font-family: inherit; font-size: 14px; 
             transition: all 0.2s; 
         }
-        input:focus, select:focus { 
+        input:focus, select:focus, textarea:focus { 
             outline: none; 
             border-color: var(--stackit-yellow); 
             box-shadow: 0 0 0 1px var(--stackit-yellow);
             background-color: #000;
         }
+        textarea { resize: vertical; min-height: 100px; font-family: var(--font-mono); font-size: 12px; line-height: 1.4; }
         input.mono { font-family: var(--font-mono); font-size: 13px; color: #ccc; }
         input::placeholder { color: #666; font-style: italic; }
 
@@ -232,12 +233,38 @@
         }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
         
+        button.btn-danger {
+            background-color: transparent; border: 1px solid var(--border-color); color: var(--danger);
+            padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; text-transform: uppercase; font-weight: bold;
+        }
+        button.btn-danger:hover { background-color: rgba(255, 51, 51, 0.1); border-color: var(--danger); }
+
         .info-box { 
             background-color: rgba(0, 178, 169, 0.1); 
             border: 1px solid var(--stackit-teal); 
             padding: 15px; border-radius: 10px; 
             font-size: 12px; color: #ddd; margin-top: 20px; 
         }
+
+        /* --- Script List --- */
+        .script-list { list-style: none; margin-top: 10px; max-height: 300px; overflow-y: auto; }
+        .script-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 12px; background: #222; margin-bottom: 8px; border-radius: 8px; border: 1px solid #333; 
+        }
+        .script-info h4 { color: #fff; font-size: 14px; margin-bottom: 2px; }
+        .script-info span { color: #666; font-size: 11px; font-family: var(--font-mono); }
+        
+        /* File Upload */
+        .file-upload-wrapper { position: relative; margin-bottom: 15px; }
+        .file-upload-wrapper input[type=file] { 
+            position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; 
+        }
+        .file-upload-btn {
+            background: #222; border: 1px dashed #555; color: #888; padding: 10px; border-radius: 10px;
+            text-align: center; font-size: 12px; cursor: pointer; transition: all 0.2s;
+        }
+        .file-upload-wrapper:hover .file-upload-btn { border-color: var(--stackit-teal); color: #fff; }
 
         /* --- Terminal Drawer --- */
         #terminal-drawer {
@@ -378,6 +405,11 @@
                     <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     <span class="nav-item-text">Images & Templates</span>
                 </button>
+                <!-- NEW SCRIPT BUTTON -->
+                <button onclick="switchTab('scripts')" id="nav-scripts" class="nav-item">
+                    <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+                    <span class="nav-item-text">Scripts & Configs</span>
+                </button>
                 <button onclick="switchTab('instances')" id="nav-instances" class="nav-item">
                     <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
                     <span class="nav-item-text">Virtual Machines</span>
@@ -402,15 +434,15 @@
                         <h3>Create Image</h3>
                         <p>Create images.</p>
                     </div>
+                    <div class="card interactive" onclick="switchTab('scripts')">
+                        <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg></div>
+                        <h3>Manage Scripts</h3>
+                        <p>Upload setup scripts for automation.</p>
+                    </div>
                     <div class="card interactive" onclick="switchTab('instances')">
                         <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg></div>
                         <h3>Deploy Instance</h3>
                         <p>Provision and scale new VMs based on templates.</p>
-                    </div>
-                    <div class="card">
-                        <div class="card-icon" style="color: #666; border-color:#333;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></div>
-                        <h3>Environment</h3>
-                        <p><strong>Node:</strong> server-proxmox<br><strong>Zone:</strong> vmbr1 (NAT)</p>
                     </div>
                 </div>
             </div>
@@ -447,6 +479,51 @@
                 </div>
             </div>
 
+            <!-- SCRIPT MANAGER VIEW -->
+            <div id="view-scripts" class="view-section">
+                <h2>Scripts & Configs</h2>
+                <div class="grid">
+                    <!-- Script List -->
+                    <div class="card">
+                        <h3 style="color: var(--stackit-yellow); border-bottom:1px solid #333; padding-bottom:10px;">Script Library</h3>
+                        <div id="script-list-container">
+                            <p style="color:#666; font-style:italic; padding:20px;">Loading scripts...</p>
+                        </div>
+                        <ul class="script-list" id="script-list-ul">
+                            <!-- JS populates this -->
+                        </ul>
+                    </div>
+
+                    <!-- Add Script Form -->
+                    <div class="card">
+                        <h3 style="color: var(--stackit-teal); border-bottom:1px solid #333; padding-bottom:10px;">Add New Script</h3>
+                        <form id="form-add-script">
+                            <div class="form-row">
+                                <div class="form-col"><label>Name</label><input type="text" id="script-name" placeholder="e.g. Docker Install"></div>
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label>Description</label>
+                                <input type="text" id="script-desc" placeholder="Optional description">
+                            </div>
+                            
+                            <!-- File Upload Area -->
+                            <div class="file-upload-wrapper">
+                                <div class="file-upload-btn">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" style="vertical-align:text-bottom; margin-right:5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                    Click here to upload .sh / .txt file
+                                </div>
+                                <input type="file" id="script-file-upload" accept=".sh,.txt,.bash">
+                            </div>
+
+                            <label>Content (Editable)</label>
+                            <textarea id="script-content" placeholder="#!/bin/bash&#10;echo 'Hello World'" style="height:200px; background:#111; color:var(--stackit-yellow);"></textarea>
+
+                            <button type="submit" class="btn-primary">Save Script</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <!-- Instances View -->
             <div id="view-instances" class="view-section">
                 <h2>Virtual Machines</h2>
@@ -476,12 +553,11 @@
                                 </div>
                             </div>
                             
-                            <!-- NEW: Start Order Input -->
                             <div class="form-row">
                                 <div class="form-col"><label>Start Order (1-99)</label>
-                                    <input type="number" id="clone-start-order" placeholder="Optional (e.g. 1)" min="1">
+                                    <input type="number" id="clone-start-order" placeholder="Optional" min="1">
                                 </div>
-                                <div class="form-col"></div> <!-- Empty spacer -->
+                                <div class="form-col"></div>
                             </div>
 
                             <div style="margin-bottom:25px;">
@@ -491,8 +567,8 @@
                             
                             <label>Network Configuration</label>
                             <div class="form-row">
-                                <input type="text" id="clone-ip" placeholder="Static IP (e.g. 192.168.10.20/24)" class="mono">
-                                <input type="text" id="clone-gw" placeholder="Gateway (e.g. 192.168.10.1)" class="mono">
+                                <input type="text" id="clone-ip" placeholder="Static IP (e.g. 10.10.10.20/24)" class="mono">
+                                <input type="text" id="clone-gw" placeholder="Gateway (e.g. 10.10.10.1)" class="mono">
                             </div>
 
                             <label>Credentials (Cloud-Init)</label>
@@ -500,7 +576,13 @@
                                 <input type="text" id="clone-user" placeholder="Username">
                                 <input type="password" id="clone-pass" placeholder="Password">
                             </div>
-                            <input type="text" id="clone-ssh" placeholder="SSH Key" class="mono">
+                            <input type="text" id="clone-ssh" placeholder="SSH Key (Optional)" class="mono" style="margin-bottom:20px;">
+
+                            <!-- SCRIPT SELECTION CLONE -->
+                            <label style="color:var(--stackit-teal);">Setup Script (Optional)</label>
+                            <select id="clone-script">
+                                <option value="">-- No Script --</option>
+                            </select>
 
                             <button type="submit" class="btn-primary" style="margin-top:25px;">Provision Instance</button>
                         </form>
@@ -518,9 +600,15 @@
                                 <label>Apply New Tag</label>
                                 <input type="text" id="redeploy-new-tag" placeholder="template-ubuntu-2204-v2" class="mono">
                             </div>
+
+                            <!-- SCRIPT SELECTION REDEPLOY -->
+                            <label style="color:var(--stackit-teal);">Setup Script (Optional)</label>
+                            <select id="redeploy-script" style="margin-bottom:20px;">
+                                <option value="">-- No Script --</option>
+                            </select>
                             
                             <div class="info-box">
-                                <strong>Warning:</strong> Old instances will be <b>Stopped and Deleted</b> first. Then, new instances are created with the same configuration (RAM, Cores, <b>Disk Size</b>, <b>Storage Pool</b>, IP) as the old ones.
+                                <strong>Warning:</strong> Instances are re-created (Data Loss!). Config & IP are preserved.
                             </div>
 
                             <button type="submit" class="btn-primary" style="margin-top:25px;">START ROLLING UPDATE</button>
@@ -596,6 +684,67 @@
         function showError(msg) { errorMessage.textContent = msg; errorBox.style.display = 'block'; setTimeout(() => errorBox.style.display = 'none', 8000); }
         function hideError() { errorBox.style.display = 'none'; }
 
+        // --- NEW: File Upload Logic (Read file content to textarea) ---
+        document.getElementById('script-file-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Populate Textarea with file content
+                document.getElementById('script-content').value = e.target.result;
+                // Auto-fill name if empty
+                const nameInput = document.getElementById('script-name');
+                if(!nameInput.value) nameInput.value = file.name;
+            };
+            reader.readAsText(file);
+        });
+
+        // --- NEW: Load Scripts into List and Dropdowns ---
+        async function loadScripts() {
+            try {
+                const res = await fetch(`${API_URL}/api/scripts`);
+                if(!res.ok) return;
+                const scripts = await res.json();
+                
+                // 1. Update List
+                const listEl = document.getElementById('script-list-ul');
+                const listContainer = document.getElementById('script-list-container');
+                
+                if (scripts.length === 0) {
+                    listContainer.innerHTML = '<p style="color:#666; font-style:italic; padding:20px;">No scripts found.</p>';
+                    listEl.innerHTML = '';
+                } else {
+                    listContainer.innerHTML = '';
+                    listEl.innerHTML = scripts.map(s => `
+                        <li class="script-item">
+                            <div class="script-info">
+                                <h4>${s.name}</h4>
+                                <span>ID: ${s.id} | ${s.description || 'No description'}</span>
+                            </div>
+                            <button class="btn-danger" onclick="deleteScript(${s.id})">DELETE</button>
+                        </li>
+                    `).join('');
+                }
+
+                // 2. Update Dropdowns
+                const options = '<option value="">-- No Script --</option>' + 
+                    scripts.map(s => `<option value="${s.id}">${s.name} (ID: ${s.id})</option>`).join('');
+                
+                document.getElementById('clone-script').innerHTML = options;
+                document.getElementById('redeploy-script').innerHTML = options;
+
+            } catch (e) { console.warn("Load scripts failed:", e); }
+        }
+
+        async function deleteScript(id) {
+            if(!confirm("Delete this script?")) return;
+            try {
+                await fetch(`${API_URL}/api/scripts/${id}`, { method: 'DELETE' });
+                loadScripts(); // Refresh list
+            } catch(e) { showError(e.message); }
+        }
+
         async function loadStorages() {
             try {
                 const res = await fetch(`${API_URL}/api/storages`);
@@ -612,9 +761,7 @@
                 const cloneSelect = document.getElementById('clone-storage');
                 if(cloneSelect) cloneSelect.innerHTML = optionsHtml;
 
-            } catch (e) {
-                console.warn("Storage load error:", e);
-            }
+            } catch (e) { console.warn("Storage load error:", e); }
         }
 
         async function refreshJobs() {
@@ -647,17 +794,13 @@
             } catch (err) { console.log("Polling..."); }
         }
 
-        // Helper for animation triggering
         function triggerInteractiveEffect() {
             const drawer = document.getElementById('terminal-drawer');
             const btn = document.getElementById('terminal-toggle-btn');
-            
             if (drawer.classList.contains('open')) {
-                // If drawer is open, flash the drawer itself
                 drawer.classList.add('drawer-flash');
                 setTimeout(() => drawer.classList.remove('drawer-flash'), 1000);
             } else {
-                // If drawer is closed, pulse the button
                 btn.classList.add('pulse-active');
                 setTimeout(() => btn.classList.remove('pulse-active'), 800);
             }
@@ -665,7 +808,7 @@
 
         const handleFormSubmit = async (e, endpoint, payloadGetter) => {
             e.preventDefault(); hideError();
-            const btn = e.target.querySelector('button');
+            const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.innerText;
             btn.innerText = "Processing..."; btn.disabled = true;
             try {
@@ -674,16 +817,26 @@
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                
-                // Trigger visual effect (pulse or flash)
                 triggerInteractiveEffect();
-                
                 setTimeout(refreshJobs, 500);
                 
+                // If we added a script, reload the list
+                if(endpoint === 'scripts') { 
+                    loadScripts(); 
+                    switchTab('scripts'); // Stay on tab but refresh
+                    // Clear inputs
+                    document.getElementById('script-name').value = '';
+                    document.getElementById('script-desc').value = '';
+                    document.getElementById('script-content').value = '';
+                }
+
             } catch (err) { showError(err.message); }
             finally { btn.innerText = originalText; btn.disabled = false; }
         };
 
+        // --- Event Listeners for Forms ---
+
+        // 1. Template
         document.getElementById('form-template').addEventListener('submit', (e) => handleFormSubmit(e, 'template', () => ({
             vmid: parseInt(document.getElementById('tpl-vmid').value),
             name: document.getElementById('tpl-name').value,
@@ -691,30 +844,52 @@
             storage: document.getElementById('tpl-storage').value
         })));
 
-        document.getElementById('form-clone').addEventListener('submit', (e) => handleFormSubmit(e, 'clone', () => ({
-            template_vmid: parseInt(document.getElementById('clone-template-vmid').value),
-            vm_name: document.getElementById('clone-vm-name').value,
-            cores: parseInt(document.getElementById('clone-cores').value),
-            memory: parseInt(document.getElementById('clone-memory').value),
-            storage: document.getElementById('clone-storage').value,
-            disk_size: document.getElementById('clone-disk-size').value,
-            start_order: document.getElementById('clone-start-order').value, // <-- NEU
-            tag: document.getElementById('clone-tag').value,
-            ci_user: document.getElementById('clone-user').value,
-            ci_password: document.getElementById('clone-pass').value,
-            ssh_key: document.getElementById('clone-ssh').value,
-            ip_cidr: document.getElementById('clone-ip').value,
-            gateway: document.getElementById('clone-gw').value
+        // 2. Add Script (NEW)
+        document.getElementById('form-add-script').addEventListener('submit', (e) => handleFormSubmit(e, 'scripts', () => ({
+            name: document.getElementById('script-name').value,
+            description: document.getElementById('script-desc').value,
+            content: document.getElementById('script-content').value
         })));
 
-        document.getElementById('form-redeploy').addEventListener('submit', (e) => handleFormSubmit(e, 'redeploy', () => ({
-            old_tag: document.getElementById('redeploy-old-tag').value,
-            new_template_id: parseInt(document.getElementById('redeploy-new-template').value),
-            new_tag: document.getElementById('redeploy-new-tag').value,
-        })));
+        // 3. Clone (Updated with script_id)
+        document.getElementById('form-clone').addEventListener('submit', (e) => {
+            handleFormSubmit(e, 'clone', () => {
+                const scriptVal = document.getElementById('clone-script').value;
+                return {
+                    template_vmid: parseInt(document.getElementById('clone-template-vmid').value),
+                    vm_name: document.getElementById('clone-vm-name').value,
+                    cores: parseInt(document.getElementById('clone-cores').value),
+                    memory: parseInt(document.getElementById('clone-memory').value),
+                    storage: document.getElementById('clone-storage').value,
+                    disk_size: document.getElementById('clone-disk-size').value,
+                    start_order: document.getElementById('clone-start-order').value,
+                    tag: document.getElementById('clone-tag').value,
+                    ci_user: document.getElementById('clone-user').value,
+                    ci_password: document.getElementById('clone-pass').value,
+                    ssh_key: document.getElementById('clone-ssh').value,
+                    ip_cidr: document.getElementById('clone-ip').value,
+                    gateway: document.getElementById('clone-gw').value,
+                    script_id: scriptVal ? parseInt(scriptVal) : null // <--- Script ID
+                };
+            });
+        });
+
+        // 4. Redeploy (Updated with script_id)
+        document.getElementById('form-redeploy').addEventListener('submit', (e) => {
+            handleFormSubmit(e, 'redeploy', () => {
+                const scriptVal = document.getElementById('redeploy-script').value;
+                return {
+                    old_tag: document.getElementById('redeploy-old-tag').value,
+                    new_template_id: parseInt(document.getElementById('redeploy-new-template').value),
+                    new_tag: document.getElementById('redeploy-new-tag').value,
+                    script_id: scriptVal ? parseInt(scriptVal) : null // <--- Script ID
+                };
+            });
+        });
 
         document.addEventListener('DOMContentLoaded', () => { 
             loadStorages(); 
+            loadScripts(); // Load scripts on startup
             refreshJobs(); 
             setInterval(refreshJobs, 2000); 
         });
