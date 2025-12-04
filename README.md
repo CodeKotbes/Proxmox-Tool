@@ -4,7 +4,7 @@
 ![Flask](https://img.shields.io/badge/Flask-2.0+-green?style=for-the-badge&logo=flask&logoColor=white)
 ![Proxmox](https://img.shields.io/badge/Proxmox-VE-E57000?style=for-the-badge&logo=proxmox&logoColor=white)
 
-A lightweight yet powerful **Infrastructure-as-Code (IaC) Portal** for Proxmox VE.
+A **Infrastructure-as-Code (IaC) Portal** for Proxmox VE.
 It enables automated VM provisioning, script management, and—as its core feature—**VM redeployment while preserving persistent data** (Immutable Infrastructure Pattern).
 
 ---
@@ -57,21 +57,6 @@ The **Rollback** feature (`/api/rollback`) is currently experimental. Depending 
 ## 📂 API Documentation
 
 To keep this README clean, the detailed API requests are provided in separate files within this repository.
-
-| File | Description |
-| :--- | :--- |
-| **[`bruno_collection/`](./bruno_collection/)** | Import these files into the [Bruno API Client](https://usebruno.com/) for instant testing. |
-| **[`curl_commands.txt`](./curl_commands.txt)** | A cheatsheet containing all `curl` commands for terminal usage. |
-
-### Quick Endpoint Overview
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/api/clone` | Provision a new VM with optional Data Disk. |
-| `POST` | `/api/redeploy` | Update OS, keep Data Disk, remount path. |
-| `POST` | `/api/scripts` | Upload batch scripts. |
-| `POST` | `/api/snapshot` | Create a manual snapshot. |
-| `POST` | `/api/cleanup/zombies` | Delete failed deployment leftovers. |
 
 ---
 
