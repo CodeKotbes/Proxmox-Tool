@@ -1,0 +1,19 @@
+meta {
+  name: POST Create Snapshot
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/snapshot
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "vmid": 100,
+    "name": "backup",
+    "description": "Backup via API"
+  }
+}

@@ -1,0 +1,18 @@
+meta {
+  name: POST Rollback
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/rollback
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "vmid": 100,
+    "snapname": "backup"
+  }
+}

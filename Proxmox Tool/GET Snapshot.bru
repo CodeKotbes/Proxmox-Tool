@@ -1,0 +1,11 @@
+meta {
+  name: GET Snapshot
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/vms/{vm_id}/snapshots
+  body: none
+  auth: none
+}

@@ -19,13 +19,11 @@ def get_proxmox_api():
 def delete_vm(node, vmid):
     """Attempts to delete a VM, catches errors if it doesn't exist."""
     try:
-        # Try to stop first
         try:
             node.qemu(vmid).status.stop.post()
-            time.sleep(8) # Wait until stop completes
+            time.sleep(8) 
         except:
             pass 
-        # Then delete
         node.qemu(vmid).delete()
         return True
     except:
@@ -34,7 +32,6 @@ def delete_vm(node, vmid):
 def find_vms_by_tag(proxmox, tag):
     """Returns a list of VMs that contain the specified tag."""
     vms = []
-    # Get all resources of type vm
     for vm in proxmox.cluster.resources.get(type='vm'):
         if tag in vm.get('tags', '').split(';'):
             vms.append(vm)
