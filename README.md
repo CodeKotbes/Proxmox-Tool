@@ -106,7 +106,7 @@ To keep this README clean, the detailed API requests are provided in separate fi
 
 | Location | Description |
 | :--- | :--- |
-| **[`Proxmox-Tool/`](./Proxmox-Tool/)** | This folder contains the **Bruno Collection**. Import it into the [Bruno API Client](https://usebruno.com/) for instant testing. |
+| **[`Proxmox-Tool/`](./ProxmoxTool/)** | This folder contains the **Bruno Collection**. Import it into the [Bruno API Client](https://usebruno.com/) for instant testing. |
 | **[`Proxmox small/Befehle.txt`](./Proxmox%20small/Befehle.txt)** | A text file containing all **Curl commands** for terminal usage. |
 
 ---
