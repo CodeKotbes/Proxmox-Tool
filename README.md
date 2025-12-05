@@ -127,4 +127,9 @@ python3 -m venv venv
 # On Linux/MacOS:
 source venv/bin/activate
 # On Windows:
-# venv\Scripts\activate
+venv\Scripts\activate
+
+### 2. Install Dependencies
+```bash
+pip install flask proxmoxer requests
+
