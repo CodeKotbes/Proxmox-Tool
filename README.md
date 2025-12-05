@@ -117,7 +117,6 @@ It is recommended to run the application within a Python virtual environment to 
 
 ### 1. Clone & Prepare Environment
 ```bash
-# Repository klonen
 git clone [https://github.com/CodeKotbes/Proxmox-Tool.git](https://github.com/CodeKotbes/Proxmox-Tool.git)
 cd Proxmox-Tool
 
