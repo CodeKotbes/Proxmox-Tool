@@ -117,8 +117,9 @@ It is recommended to run the application within a Python virtual environment to 
 
 ### 1. Clone & Prepare Environment
 ```bash
-git clone [https://github.com/YourRepo/Proxmox-Portal.git](https://github.com/YourRepo/Proxmox-Portal.git)
-cd Proxmox-Portal
+# Repository klonen
+git clone [https://github.com/CodeKotbes/Proxmox-Tool.git](https://github.com/CodeKotbes/Proxmox-Tool.git)
+cd Proxmox-Tool
 
 # Create Virtual Environment
 python3 -m venv venv
@@ -127,9 +128,4 @@ python3 -m venv venv
 # On Linux/MacOS:
 source venv/bin/activate
 # On Windows:
-venv\Scripts\activate
-
-### 2. Install Dependencies
-```bash
-pip install flask proxmoxer requests
-
+# venv\Scripts\activate
