@@ -167,10 +167,9 @@ def run_clone_task(job_id, template_vmid, new_vm_name, cores, memory, disk_size,
     target_storage = storage if storage else "local"
     
     JOBS[job_id]["message"] = f"Cloning {template_vmid} to {new_vmid} on {target_storage}..."
-    clone_params = {"newid": new_vmid, "name": new_vm_name}
-    if storage: 
-        clone_params["storage"] = storage
-        clone_params["full"] = 1
+    
+    clone_params = {"newid": new_vmid, "name": new_vm_name, "full": 1, "format": "qcow2"}
+    if storage: clone_params["storage"] = storage
     
     node.qemu(template_vmid).clone.post(**clone_params)
     time.sleep(20)
@@ -182,7 +181,7 @@ def run_clone_task(job_id, template_vmid, new_vm_name, cores, memory, disk_size,
     if data_disk_gb and int(data_disk_gb) > 0:
         JOBS[job_id]["message"] = f"Creating Data Disk ({data_disk_gb} GB)..."
         try:
-            disk_conf = f"{target_storage}:{data_disk_gb}"
+            disk_conf = f"{target_storage}:{data_disk_gb},format=qcow2"
             node.qemu(new_vmid).config.post(scsi1=disk_conf)
             time.sleep(5)
         except Exception as e:
@@ -217,7 +216,9 @@ def run_clone_task(job_id, template_vmid, new_vm_name, cores, memory, disk_size,
 @task_wrapper
 def run_redeploy_task(job_id, old_tag, new_template_id, new_tag, script_ids=[], mount_path=None):
     proxmox = get_proxmox_api()
-    if not proxmox: return
+    if not proxmox:
+        JOBS[job_id] = {"status": "error", "message": "API connection failed"}
+        return
     node = proxmox.nodes(config.NODE_NAME)
 
     JOBS[job_id]["status"] = "running"
@@ -234,18 +235,18 @@ def run_redeploy_task(job_id, old_tag, new_template_id, new_tag, script_ids=[], 
         original_name = vm['name']
         log_msg.append(f"> Processing {original_name} ({old_id})")
         JOBS[job_id]["message"] = "\n".join(log_msg)
-        
+
         snap_name = f"autobackup_{int(time.time())}"
         try:
             node.qemu(old_id).snapshot.post(snapname=snap_name, description="Pre-Redeploy", vmstate=0)
             time.sleep(3)
         except Exception as e:
-            log_msg.append(f"  ! Snapshot failed (Non-Fatal): {e}")
+            log_msg.append(f"  ! Snapshot skipped (likely RAW Disk): {e}")
 
         try:
             old_conf = node.qemu(old_id).config.get()
-            data_vol = old_conf.get('scsi1')
-            os_vol = old_conf.get('scsi0')
+            data_vol = old_conf.get('scsi1') 
+            os_vol = old_conf.get('scsi0') 
             
             disk_storage = "local"
             if data_vol and ":" in data_vol: disk_storage = data_vol.split(":")[0]
@@ -260,12 +261,16 @@ def run_redeploy_task(job_id, old_tag, new_template_id, new_tag, script_ids=[], 
             copy_mem = old_conf.get('memory', 2048)
             copy_cores = old_conf.get('cores', 2)
             copy_ip = old_conf.get('ipconfig0', "ip=dhcp,ip6=dhcp")
+            
+            copy_sshkeys = old_conf.get('sshkeys') 
+            copy_startup = old_conf.get('startup') 
+
         except Exception as e:
             log_msg.append(f"  ! Config Error: {e}")
             continue
 
         new_id = proxmox.cluster.nextid.get()
-        clone_params = {"newid": new_id, "name": original_name, "full": 1}
+        clone_params = {"newid": new_id, "name": original_name, "full": 1, "format": "qcow2"}
         if disk_storage: clone_params["storage"] = disk_storage
         try:
             node.qemu(new_template_id).clone.post(**clone_params)
@@ -284,13 +289,23 @@ def run_redeploy_task(job_id, old_tag, new_template_id, new_tag, script_ids=[], 
             try:
                 node.qemu(old_id).config.put(delete="scsi1")
                 time.sleep(3)
-            except: continue 
+            except Exception as e:
+                log_msg.append(f"  ! Detach Error: {e}")
+                continue 
 
         config_payload = {
             "memory": copy_mem, "cores": copy_cores, "ipconfig0": copy_ip,
             "tags": new_tag, "net0": f"virtio,bridge={config.NAT_BRIDGE}",
-            "ciuser": config.DEFAULT_USER, "cipassword": config.DEFAULT_PASS
+            "ciuser": config.DEFAULT_USER, 
+            "cipassword": config.DEFAULT_PASS
         }
+
+        if copy_sshkeys:
+            config_payload["sshkeys"] = copy_sshkeys
+
+        if copy_startup:
+            config_payload["startup"] = copy_startup
+
         if data_vol: config_payload["scsi1"] = data_vol
 
         node.qemu(new_id).config.post(**config_payload)
@@ -298,19 +313,39 @@ def run_redeploy_task(job_id, old_tag, new_template_id, new_tag, script_ids=[], 
 
         delete_old_vm = True
         if data_vol:
-            current_fmt = "raw"
-            if "qcow2" in data_vol: current_fmt = "qcow2"
-            target_fmt = "qcow2" if current_fmt == "raw" else "raw"
+            log_msg.append(f"  + Moving disk (enforcing QCOW2)...")
+            JOBS[job_id]["message"] = "\n".join(log_msg)
+            
+            is_qcow2 = "qcow2" in data_vol
             
             try:
-                node.qemu(new_id).move_disk.post(disk="scsi1", storage=disk_storage, format=target_fmt, delete=1)
-                time.sleep(15)
+                if not is_qcow2:
+                    log_msg.append("  + Converting RAW -> QCOW2...")
+                    node.qemu(new_id).move_disk.post(
+                        disk="scsi1", storage=disk_storage, format="qcow2", delete=1
+                    )
+                    time.sleep(15)
+                else:
+                    log_msg.append("  + Step 1/2: Temp RAW conversion...")
+                    node.qemu(new_id).move_disk.post(
+                        disk="scsi1", storage=disk_storage, format="raw", delete=1
+                    )
+                    time.sleep(15) 
+                    log_msg.append("  + Step 2/2: Final QCOW2 conversion...")
+                    node.qemu(new_id).move_disk.post(
+                        disk="scsi1", storage=disk_storage, format="qcow2", delete=1
+                    )
+                    time.sleep(15)
+
             except Exception as move_err:
                 log_msg.append(f"  ! MOVE FAILED: {move_err}")
-                log_msg.append("  ! ZOMBIE MODE: Data protected.")
+                log_msg.append("  ! ZOMBIE MODE: Renaming Old VM to protect data.")
                 delete_old_vm = False
                 try:
-                    node.qemu(old_id).config.post(name=f"ZOMBIE-{old_id}", tags=f"move-failed")
+                    new_zombie_name = f"ZOMBIE-{old_id}-{original_name}"
+                    node.qemu(old_id).config.post(name=new_zombie_name)
+                    old_tags = old_conf.get("tags", "")
+                    node.qemu(old_id).config.post(tags=f"{old_tags},move-failed,do-not-delete")
                 except: pass
 
         if delete_old_vm:
@@ -325,13 +360,13 @@ def run_redeploy_task(job_id, old_tag, new_template_id, new_tag, script_ids=[], 
         if data_vol and mount_path:
             full_script_content += generate_persistence_script(mount_path)
             full_script_content += "\n\n"
-        
+            
         user_scripts = combine_scripts(script_ids)
         if user_scripts: full_script_content += user_scripts
             
         if full_script_content:
             try: run_guest_script(node, new_id, full_script_content)
-            except: pass
+            except Exception as se: log_msg.append(f"  ! Script Warning: {se}")
 
     JOBS[job_id]["status"] = "success"
     JOBS[job_id]["message"] = "Redeploy complete.\n" + "\n".join(log_msg)
@@ -339,19 +374,44 @@ def run_redeploy_task(job_id, old_tag, new_template_id, new_tag, script_ids=[], 
 @task_wrapper
 def run_snapshot_task(job_id, vmid, snap_name, description):
     proxmox = get_proxmox_api()
-    if not proxmox: return
+    if not proxmox:
+        JOBS[job_id] = {"status": "error", "message": "API connection failed"}
+        return
     node = proxmox.nodes(config.NODE_NAME)
 
     JOBS[job_id]["status"] = "running"
-    JOBS[job_id]["message"] = f"Creating snapshot '{snap_name}' for VM {vmid}..."
+    JOBS[job_id]["message"] = f"Checking VM {vmid} capability..."
 
-    node.qemu(vmid).snapshot.post(snapname=snap_name, description=description, vmstate=0)
-    
-    for _ in range(30):
-        time.sleep(1)
-    
-    JOBS[job_id]["status"] = "success"
-    JOBS[job_id]["message"] = f"Snapshot '{snap_name}' created."
+    try:
+        conf = node.qemu(vmid).config.get()
+        disk_config = conf.get("scsi0", "")
+        
+        if "media=cdrom" not in disk_config:
+            if ".raw" in disk_config or "format=raw" in disk_config:
+                JOBS[job_id]["status"] = "error"
+                JOBS[job_id]["message"] = (
+                    "Snapshot failed: Disk is in RAW format.\n"
+                    "Please execute a Redeploy to convert it back to QCOW2."
+                )
+                return
+
+        JOBS[job_id]["message"] = f"Creating snapshot '{snap_name}'..."
+        node.qemu(vmid).snapshot.post(snapname=snap_name, description=description, vmstate=0)
+        
+        for _ in range(30):
+            task_status = node.qemu(vmid).snapshot.get()
+            time.sleep(1)
+
+        JOBS[job_id]["status"] = "success"
+        JOBS[job_id]["message"] = f"Snapshot '{snap_name}' created."
+        
+    except Exception as e:
+        err_msg = str(e)
+        if "feature not available" in err_msg:
+            JOBS[job_id]["message"] = "Error: Snapshots not supported on this Disk type (RAW)."
+        else:
+            JOBS[job_id]["message"] = f"Proxmox Error: {err_msg}"
+        JOBS[job_id]["status"] = "error"
 
 @task_wrapper
 def run_rollback_task(job_id, vmid, snapname):

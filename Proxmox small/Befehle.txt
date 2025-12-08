@@ -8,6 +8,8 @@ curl -X GET http://188.34.81.134:5000/api/jobs               //all jobs
 
 curl -X GET http://188.34.81.134:5000/api/scripts        //get scripts
 
+curl -X GET http://188.34.81.134:5000/api/vms      //get vms 
+
 
 POST:
 
@@ -80,7 +82,7 @@ curl -X POST http://188.34.81.134:5000/api/rollback \           //rollback
     "snapname": "backup"
   }'
 
-curl -X POST http://188.34.81.134:5000/api/cleanup/zombies
+curl -X POST http://188.34.81.134:5000/api/cleanup/zombies   //clean zombies 
 
 
 DELETE:

@@ -112,19 +112,45 @@ def api_create_snapshot():
     )).start()
     return jsonify({"status": "started", "job_id": jid}), 202
 
+@app.route("/api/vms", methods=["GET"])
+def api_list_vms():
+    proxmox = get_proxmox_api()
+    if not proxmox: return jsonify({"error": "No connection"}), 500
+    node = proxmox.nodes(config.NODE_NAME)
+    vms = []
+    try:
+        for vm in node.qemu.get():
+            vms.append({
+                "vmid": vm.get("vmid"),
+                "name": vm.get("name"),
+                "status": vm.get("status"),
+                "tags": vm.get("tags", "")
+            })
+        vms.sort(key=lambda x: int(x['vmid']))
+        return jsonify(vms)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/vms/<int:vmid>/snapshots", methods=["GET"])
 def api_get_snapshots(vmid):
     proxmox = get_proxmox_api()
     if not proxmox: return jsonify({"error": "No connection"}), 500
     node = proxmox.nodes(config.NODE_NAME)
+    
     try:
         snaps = node.qemu(vmid).snapshot.get()
         result = []
         for s in snaps:
             if s.get("name") != "current":
-                result.append({"name": s.get("name"), "description": s.get("description", ""), "time": s.get("snaptime")})
+                result.append({
+                    "name": s.get("name"),
+                    "description": s.get("description", ""),
+                    "time": s.get("snaptime")
+                })
+        result.reverse() 
         return jsonify(result)
-    except Exception as e: return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": f"VM {vmid} not found or no snapshots available"}), 404
 
 @app.route("/api/rollback", methods=["POST"])
 def api_rollback_vm():

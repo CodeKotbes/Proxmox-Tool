@@ -194,6 +194,7 @@
         }
         input[type=number] {
             -moz-appearance: textfield;
+            appearance: textfield;
         }
 
         button.btn-primary { 
@@ -250,6 +251,25 @@
         .script-info h4 { color: #fff; font-size: 14px; margin-bottom: 2px; }
         .script-info span { color: #666; font-size: 11px; font-family: var(--font-mono); }
         
+        .split-view { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; height: calc(100vh - 250px); }
+        .split-col { display: flex; flex-direction: column; overflow: hidden; background: var(--card-bg); border-radius: var(--radius); border: 1px solid var(--border-color); }
+        
+        .list-container { 
+            overflow-y: auto; flex: 1;
+            background: var(--input-bg);
+        }
+        .maintenance-list-item {
+            padding: 15px; border-bottom: 1px solid #222; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+            transition: background 0.2s;
+        }
+        .maintenance-list-item:hover { background: #1a1a1a; }
+        .maintenance-list-item.selected { border-left: 3px solid var(--stackit-yellow); background: #1a1a1a; }
+        
+        .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #333; color: #ccc; text-transform: uppercase; font-weight: bold; }
+        .badge.running { color: var(--stackit-teal); background: rgba(0, 178, 169, 0.1); }
+        .badge.stopped { color: #666; background: #222; }
+
+
         .file-upload-wrapper { position: relative; margin-bottom: 15px; }
         .file-upload-wrapper input[type=file] { 
             position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; 
@@ -428,6 +448,11 @@
                         <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg></div>
                         <h3>Deploy Instance</h3>
                         <p>Provision VMs with persistent storage.</p>
+                    </div>
+                    <div class="card interactive" onclick="switchTab('scripts')">
+                        <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></div>
+                        <h3>Scripts & Configs</h3>
+                        <p>Upload and organize bash scripts.</p>
                     </div>
                     <div class="card interactive" onclick="switchTab('maintenance')">
                         <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg></div>
@@ -614,46 +639,35 @@
             </div>
 
             <div id="view-maintenance" class="view-section">
-                <h2>Maintenance & Tools</h2>
-                <div class="grid">
-                    <div class="card">
-                        <h3 style="color: var(--stackit-yellow);">Manual Snapshot</h3>
-                        <p>Create a backup state for a specific VM.</p>
-                        <form id="form-snapshot" style="margin-top:20px;">
-                            <label>VM ID</label>
-                            <input type="number" id="snap-vmid" placeholder="e.g. 105">
-                            
-                            <label style="margin-top:15px;">Snapshot Name</label>
-                            <input type="text" id="snap-name" placeholder="backup_before_test">
-                            
-                            <label style="margin-top:15px;">Description</label>
-                            <input type="text" id="snap-desc" placeholder="Optional info">
-
-                            <button type="submit" class="btn-primary">Take Snapshot</button>
-                        </form>
-                    </div>
-
-                    <div class="card">
-                        <h3 style="color: var(--stackit-teal);">Rollback VM</h3>
-                        <p>Revert a VM to a previous state.</p>
-                        <form id="form-rollback" style="margin-top:20px;">
-                            <label>VM ID</label>
-                            <input type="number" id="rollback-vmid" placeholder="e.g. 105">
-                            
-                            <label style="margin-top:15px;">Snapshot Name</label>
-                            <input type="text" id="rollback-snapname" placeholder="autobackup_123456">
-
-                            <button type="submit" class="btn-danger" style="width:100%; margin-top:15px; padding:16px;">REVERT STATE</button>
-                        </form>
-                    </div>
-
-                    <div class="card">
-                        <h3 style="color: var(--danger);">Cleanup Zombies</h3>
-                        <p>Delete old VMs marked as 'ZOMBIE' or 'move-failed'.</p>
-                        <div class="info-box" style="margin:20px 0;">
-                            Only deletes VMs that are <strong>stopped</strong> and have the specific zombie-tags.
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2>Maintenance Center</h2>
+                    <button class="btn-danger" id="btn-cleanup" style="padding:10px 20px;">🗑️ CLEAN ZOMBIES</button>
+                </div>
+                
+                <div class="split-view">
+                    <div class="split-col">
+                        <div style="padding:15px; border-bottom:1px solid #333; background:var(--input-bg);">
+                            <input type="text" id="vm-search" placeholder="Search VMs..." onkeyup="renderVMList()" style="margin-bottom:0;">
                         </div>
-                        <button id="btn-cleanup" class="btn-danger" style="width:100%; padding:16px;">RUN GARBAGE COLLECTION</button>
+                        <div class="list-container" id="vm-list">
+                            <div style="padding:20px; text-align:center; color:var(--text-muted);">Loading VMs...</div>
+                        </div>
+                    </div>
+
+                    <div class="split-col" style="padding:20px;">
+                        <h3 id="snap-header" style="color:#fff; border-bottom:1px solid #333; padding-bottom:15px; margin-bottom:20px;">Select a VM</h3>
+                        
+                        <div id="snap-area" style="display:none; flex:1; flex-direction:column;">
+                            <div style="background:var(--input-bg); padding:15px; border-radius:var(--radius); border:1px solid #333; margin-bottom:20px;">
+                                <div class="form-row" style="margin:0; align-items:flex-end;">
+                                    <div class="form-col"><label>New Snapshot Name</label><input type="text" id="new-snap-name" placeholder="backup_v1"></div>
+                                    <button class="btn-primary" onclick="createSnapshot()" style="width:auto; height:48px; margin-top:0;">CREATE</button>
+                                </div>
+                            </div>
+
+                            <h3 style="margin-bottom:10px; font-size:14px; color:var(--text-muted);">Restore Points</h3>
+                            <div class="list-container" id="snap-list" style="flex:1; max-height:none; background:transparent;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -690,6 +704,8 @@
 
     <script>
         const API_URL = ""; 
+        let globalVMs = [];
+        let selectedVmId = null;
 
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
 
@@ -715,6 +731,8 @@
             
             const navBtn = document.getElementById('nav-' + viewId);
             if(navBtn) navBtn.classList.add('active');
+
+            if(viewId === 'maintenance') loadVMsForMaintenance();
         }
 
         const errorBox = document.getElementById('error-box');
@@ -741,6 +759,76 @@
             };
             reader.readAsText(file);
         });
+
+        async function loadVMsForMaintenance() {
+            try {
+                const res = await fetch(`${API_URL}/api/vms`);
+                globalVMs = await res.json();
+                renderVMList();
+            } catch(e) { console.error(e); }
+        }
+
+        function renderVMList() {
+            const filter = document.getElementById('vm-search').value.toLowerCase();
+            const filtered = globalVMs.filter(v => v.name.toLowerCase().includes(filter) || v.vmid.toString().includes(filter));
+            
+            document.getElementById('vm-list').innerHTML = filtered.map(v => `
+                <div class="maintenance-list-item ${selectedVmId === v.vmid ? 'selected' : ''}" onclick="selectVM(${v.vmid}, '${v.name}')">
+                    <div>
+                        <div style="font-weight:bold; color:#fff;">${v.name}</div>
+                        <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">ID: ${v.vmid} | ${v.tags || '-'}</div>
+                    </div>
+                    <span class="badge ${v.status}">${v.status}</span>
+                </div>
+            `).join('');
+        }
+
+        async function selectVM(id, name) {
+            selectedVmId = id;
+            renderVMList(); 
+            
+            document.getElementById('snap-header').innerHTML = `Snapshots: <span style="color:var(--stackit-yellow)">${name}</span>`;
+            document.getElementById('snap-area').style.display = 'flex';
+            document.getElementById('snap-list').innerHTML = '<div style="padding:20px; text-align:center;">Loading...</div>';
+
+            try {
+                const res = await fetch(API_URL + `/api/vms/${id}/snapshots`);
+                if(!res.ok) throw new Error("Could not fetch snapshots");
+                const snaps = await res.json();
+
+                if(snaps.length === 0) {
+                    document.getElementById('snap-list').innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">No snapshots found.</div>';
+                    return;
+                }
+
+                document.getElementById('snap-list').innerHTML = snaps.map(s => `
+                    <div class="maintenance-list-item" style="cursor:default;">
+                        <div>
+                            <div style="font-weight:bold; color:var(--stackit-teal);">${s.name}</div>
+                            <div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">${new Date(s.time * 1000).toLocaleString()} | ${s.description}</div>
+                        </div>
+                        <button class="btn-danger" style="width:auto; padding:6px 12px;" onclick="rollback(${id}, '${s.name}')">RESTORE</button>
+                    </div>
+                `).join('');
+
+            } catch(e) {
+                document.getElementById('snap-list').innerHTML = `<div style="padding:20px; color:var(--danger);">${e.message}</div>`;
+            }
+        }
+
+        async function createSnapshot() {
+            const name = document.getElementById('new-snap-name').value;
+            if(!selectedVmId || !name) return alert("Select VM and enter Name");
+            
+            await triggerAction('snapshot', { vmid: selectedVmId, name: name, description: 'Manual via Portal' });
+            document.getElementById('new-snap-name').value = '';
+            setTimeout(() => selectVM(selectedVmId, '...'), 3000); // Reload list
+        }
+
+        async function rollback(vmid, snapname) {
+            if(!confirm(`Revert VM ${vmid} to state '${snapname}'? Data since then will be lost.`)) return;
+            await triggerAction('rollback', { vmid: vmid, snapname: snapname });
+        }
 
         async function loadScripts() {
             try {
@@ -851,22 +939,28 @@
             }
         }
 
-        const handleFormSubmit = async (e, endpoint, payloadGetter) => {
-            e.preventDefault(); hideError();
-            const btn = e.target.querySelector('button[type="submit"]');
-            const originalText = btn.innerText;
-            btn.innerText = "Processing..."; btn.disabled = true;
+        async function triggerAction(endpoint, payload) {
+            hideError();
             try {
-                const payload = payloadGetter();
                 await fetch(`${API_URL}/api/${endpoint}`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 triggerInteractiveEffect();
                 setTimeout(refreshJobs, 500);
-                if(endpoint === 'scripts') { loadScripts(); switchTab('scripts'); }
             } catch (err) { showError(err.message); }
-            finally { btn.innerText = originalText; btn.disabled = false; }
+        }
+
+        const handleFormSubmit = async (e, endpoint, payloadGetter) => {
+            e.preventDefault(); 
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerText = "Processing..."; btn.disabled = true;
+            try {
+                const payload = payloadGetter();
+                await triggerAction(endpoint, payload);
+                if(endpoint === 'scripts') { loadScripts(); switchTab('scripts'); }
+            } finally { btn.innerText = originalText; btn.disabled = false; }
         };
 
         document.getElementById('form-template').addEventListener('submit', (e) => handleFormSubmit(e, 'template', () => ({
@@ -914,36 +1008,21 @@
                     old_tag: document.getElementById('redeploy-old-tag').value,
                     new_template_id: parseInt(document.getElementById('redeploy-new-template').value),
                     new_tag: document.getElementById('redeploy-new-tag').value,
-                    
                     mount_path: document.getElementById('redeploy-mount-path').value, 
-                    
                     script_ids: getCheckedScriptIds('redeploy-script-container') 
                 };
             });
         });
-
-        document.getElementById('form-snapshot').addEventListener('submit', (e) => handleFormSubmit(e, 'snapshot', () => ({
-            vmid: parseInt(document.getElementById('snap-vmid').value),
-            name: document.getElementById('snap-name').value,
-            description: document.getElementById('snap-desc').value
-        })));
-
-        document.getElementById('form-rollback').addEventListener('submit', (e) => handleFormSubmit(e, 'rollback', () => ({
-            vmid: parseInt(document.getElementById('rollback-vmid').value),
-            snapname: document.getElementById('rollback-snapname').value
-        })));
 
         document.getElementById('btn-cleanup').addEventListener('click', async () => {
             if(!confirm("Are you sure? This deletes old VMs marked as ZOMBIE.")) return;
             try {
                 const btn = document.getElementById('btn-cleanup');
                 btn.innerText = "Cleaning..."; btn.disabled = true;
-                const res = await fetch(`${API_URL}/api/cleanup/zombies`, { method: 'POST' });
-                const data = await res.json();
-                alert(`Cleaned up ${data.deleted.length} zombies.`);
+                await fetch(`${API_URL}/api/cleanup/zombies`, { method: 'POST' });
                 triggerInteractiveEffect();
             } catch(e) { showError(e.message); }
-            finally { document.getElementById('btn-cleanup').innerText = "RUN GARBAGE COLLECTION"; document.getElementById('btn-cleanup').disabled = false; }
+            finally { document.getElementById('btn-cleanup').innerText = "🗑️ CLEAN ZOMBIES"; document.getElementById('btn-cleanup').disabled = false; }
         });
 
         document.addEventListener('DOMContentLoaded', () => { 
