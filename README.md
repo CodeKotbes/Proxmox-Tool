@@ -1,215 +1,142 @@
-🚀 Proxmox Automation & Redeployment Portal
+# 🚀 Proxmox Automation & Redeployment Portal
 
-A lightweight yet powerful Infrastructure-as-Code (IaC) Portal for Proxmox VE.
-It enables automated VM provisioning, script management, and—as its core feature—VM redeployment while preserving persistent data (Immutable Infrastructure Pattern).
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue) ![Flask](https://img.shields.io/badge/Framework-Flask-green) ![Proxmox](https://img.shields.io/badge/Platform-Proxmox_VE-orange) 
 
-🔥 Key Features
+**A lightweight yet powerful Infrastructure-as-Code (IaC) Portal for Proxmox VE.**
 
-🖥️ Smart Provisioning
+This tool facilitates automated VM provisioning, script management, and—as its core feature—**VM redeployment while preserving persistent data** (Immutable Infrastructure Pattern). It effectively separates the Operating System (Ephemeral) from User Data (Persistent).
 
-Cloud-Init Integration: Clone templates with full network configuration (User, SSH Keys, IP, Gateway) in seconds.
+---
 
-Custom Scripts: Inject post-install scripts (Bash) automatically via QEMU Guest Agent.
+## 🔥 Key Features
 
-💾 Persistent Storage Engine
+### 🖥️ Smart Provisioning
+* **Cloud-Init Integration:** Clone templates with full network configuration (User, SSH Keys, IP, Gateway) in seconds.
+* **Custom Script Injection:** Inject post-install Bash scripts automatically via QEMU Guest Agent.
 
-Auto-Data-Disk: Automatically creates and formats a secondary hard disk (scsi1) for data.
+### 💾 Persistent Storage Engine
+* **Auto-Data-Disk:** Automatically creates, formats, and mounts a secondary hard disk (`scsi1`) for data.
+* **Immutable Redeployment:**
+    * The OS disk (`scsi0`) is wiped/replaced with a fresh template.
+    * The Data Disk (`scsi1`) is detached, saved, attached to the new VM, and physically moved.
+    * Data is remounted automatically to the desired path (e.g., `/home` or `/var/www`).
 
-Redeploy Mechanism:
+### 🛡️ Fail-Safe Architecture ("Zombie Mode")
+* **Atomic Operations:** If a disk move or cloning operation fails, the system halts.
+* **Zombie State:** The old VM is renamed to `ZOMBIE-...` rather than deleted.
+* **No Data Loss:** This ensures your data disk is never deleted accidentally if the migration fails.
 
-The OS disk (scsi0) is wiped and replaced with a fresh template.
+### ⚡ Optimized Script Injection
+* **Reliable Uploads:** Uses a chunking algorithm to upload large scripts via the QEMU Guest Agent, preventing timeouts and buffer overflows.
+* **Batch Processing:** Support for uploading and assigning multiple scripts simultaneously.
 
-The Data Disk is detached, saved, attached to the new VM, and physically moved.
+---
 
-Data is remounted automatically to the desired path (e.g., /home or /var/www).
+## 📘 System Architecture & Workflows
 
-🛡️ Fail-Safe Architecture
+This application consists of a **Python Flask Backend**, a **SQLite Database** for job management, and a web-based frontend.
 
-Zombie Mode: If a disk move or cloning operation fails, the system stops the process and renames the old VM to ZOMBIE-....
+### 1. Template Creation (Image Builder)
+Before provisioning, a "Golden Image" is required.
+1.  **Create VM:** Setup with VirtIO Network & SCSI Controller.
+2.  **Import Disk:** Import a Cloud-Image (e.g., `ubuntu-22.04-cloud-image.qcow2`).
+3.  **Cloud-Init:** Attach a Cloud-Init drive (`ide2`).
+4.  **Convert:** Convert the VM into a Proxmox Template.
 
-No Data Loss: The old VM is kept alive to ensure your data disk is never deleted accidentally.
+### 2. VM Provisioning (The Clone)
+1.  User selects template and resources (CPU/RAM).
+2.  **Network Config:** Injects IP/SSH keys via Cloud-Init.
+3.  **Storage Setup:** Creates a secondary empty disk (`scsi1`) and generates a dynamic setup script to format/mount it on first boot.
+4.  **Scripting:** Injects user-selected Bash scripts via QEMU Agent.
 
-⚡ Script Injection
+### 3. VM Redeployment (The Core Mechanism)
+This allows replacing the OS while keeping data intact.
 
-Reliable Upload: Uses a chunking algorithm to upload large scripts via the QEMU Guest Agent without timeouts or buffer overflows.
+1.  **Snapshot:** Takes a safety snapshot of the old VM.
+2.  **Clone:** Spins up a new VM from the updated template.
+3.  **Resize:** Detects old OS disk size and adjusts the new VM to match.
+4.  **Hardware Transfer:** Detaches `scsi1` (Data) from the Old VM -> Attaches to New VM.
+5.  **Physical Move:** Moves the virtual disk file to the new VM's storage path.
+    * *Strategy:* Toggles format (raw <-> qcow2) if necessary to force Proxmox to move files on local storage.
+6.  **Smart Mount:** Auto-detects existing data and mounts it.
+7.  **Cleanup:** The old VM is deleted **only** if all steps succeed. If not, it remains as a "ZOMBIE".
 
-Batch Processing: Upload and assign multiple scripts at once.
+---
 
-📘 Functional Description & System Architecture
+## ⚠️ Critical Warnings & Constraints
 
-This application consists of a Python Flask Backend, a SQLite Database for script/job management, and a modern Web Frontend.
+> [!WARNING]
+> **Please read carefully before deploying in production.**
 
-1. Core Workflows
+### 1. Storage Format (QCOW2 Required)
+To utilize the Snapshot and Redeploy features effectively, your virtual machine disks must be in `.qcow2` format (especially when using directory-based storage like `local`).
+* **Raw files (.raw):** Do not support internal snapshots efficiently.
+* **ZFS/LVM-Thin:** Supported, but the redeploy logic is currently optimized for qcow2 file-based operations.
 
-A. Template Creation (Image Builder)
+### 2. Snapshot Lifecycle
+Snapshots are tied to the specific VM ID.
+* **The Risk:** When you Redeploy, a **new VM ID** is created.
+* **The Result:** History (Snapshots) of the old VM is lost. Only the current data on the persistent disk is carried over.
 
-Before provisioning, the system needs a standardized "Golden Image".
+### 3. IP Management (No Validation)
+Currently, there is no IP Address Management (IPAM) validation.
+* **Risk:** You can assign an IP that is already in use (e.g., by a "Zombie" VM).
+* **Result:** SSH Host Key Verification failures and routing issues.
+* **Advice:** Use the "Cleanup" feature to remove Zombie VMs before reusing IPs.
 
-Prerequisite: A Cloud-Image (e.g., ubuntu-22.04-cloud-image.qcow2) on the Proxmox storage.
+### 4. CIDR Notation Mandatory
+When defining IPs via API or Frontend, you **must** use CIDR notation.
+* ❌ Wrong: `192.168.1.50`
+* ✅ Right: `192.168.1.50/24`
 
-Process:
+---
 
-VM Shell: Creates a VM with optimized hardware settings (VirtIO Network & SCSI).
+## 📂 API Documentation
 
-Disk Import: Imports the image file as the system disk (scsi0).
+Detailed API requests and collections are located in the repository:
 
-Cloud-Init: Automatically attaches a Cloud-Init drive (ide2) to allow parameter injection later.
+| Location | Description |
+| :--- | :--- |
+| `Proxmox-Tool/` | **Bruno Collection**: Import into [Bruno](https://www.usebruno.com/) for instant testing. |
+| `Proxmox small/Befehle.txt` | **Curl Commands**: A raw text file with Curl examples. |
 
-Conversion: Converts the VM into a Proxmox Template.
+---
 
-B. VM Provisioning (Clone)
+## ⚙️ Installation & Setup
 
-Creates a new VM based on a template.
+It is recommended to use a Python Virtual Environment.
 
-Process:
-
-User selects a template and resources (CPU, RAM).
-
-Network Config: Sets Cloud-Init parameters (IP, SSH Keys, User).
-
-Persistent Storage (Optional):
-
-If requested, a second empty disk (scsi1) is created.
-
-A dynamic setup script is generated to format and mount this disk on the first boot (e.g., to /home).
-
-Setup Scripts: Selected Bash scripts are injected and executed via QEMU Guest Agent.
-
-C. VM Redeployment (Update & Data Persistence)
-
-The heart of the application. Allows replacing the OS while keeping data.
-
-The Fail-Safe Process:
-
-Identification: Finds all VMs matching the provided old_tag.
-
-Safety Snapshot: Automatically takes a snapshot of the old VM.
-
-Clone: Creates a new VM from the (potentially updated) template.
-
-OS Restore: Detects the size of the old OS disk and resizes the new VM's disk to match.
-
-Hardware Transfer: Detaches the Data Disk (scsi1) from the old VM and attaches it to the new one.
-
-Fail-Safe Move: Physically moves the disk file to the new VM's folder (move_disk).
-
-Technical Trick: Toggles the format (raw <-> qcow2) to force Proxmox to move the file even on local storage.
-
-Safety: If this fails, the process aborts, and the old VM remains as a "ZOMBIE".
-
-Smart Mounting: A dynamic script mounts the rescued disk. It auto-detects existing data and syncs it if necessary.
-
-Cleanup: The old VM is only deleted if all steps succeed.
-
-D. Maintenance & Self-Healing
-
-Manual Snapshots: Create restore points via API.
-
-Rollback: Revert a VM to a previous snapshot state.
-
-Garbage Collection: A specific task searches for failed deployments (marked by tags like move-failed and names like ZOMBIE-...) and safely deletes them if they are stopped.
-
-⚠️ Critical Warnings & Constraints
-
-$$\!WARNING$$
-
-
-Please read these points carefully before deploying in a production environment.
-
-1. 💾 Storage Format (QCOW2 Required)
-
-To utilize the Snapshot and Redeploy features effectively, your virtual machine disks must be in .qcow2 format (especially when using directory-based storage like local).
-
-Raw files (.raw) typically do not support internal snapshots.
-
-If you use ZFS or LVM-Thin, snapshots are supported natively, but the redeploy mechanism currently relies on file-based logic optimized for qcow2.
-
-2. 📸 Snapshot Lifecycle & Persistence
-
-Snapshots are strictly tied to the current VM ID.
-
-The Scenario: You have VM 100 with a snapshot named backup_v1.
-
-The Action: You run a Redeploy. The system creates VM 101 and moves the data disk to it.
-
-The Result: Once the deployment is successful and VM 100 is deleted, the snapshot backup_v1 is permanently lost.
-
-Summary: Snapshots do not carry over to the new instance. The new VM starts fresh (without history), retaining only the current data on the persistent disk.
-
-3. 🛑 Duplicate IPs & No Validation
-
-Currently, there is no validation to check if an IP address is already assigned to another active VM.
-
-The Risk: You can accidentally assign the same static IP to multiple VMs (e.g., a "Zombie" VM and a new live VM).
-
-The Consequence: SSH connections will fail ("Host key verification failed") because the network router cannot distinguish between the VMs.
-
-Advice: Always ensure old/zombie VMs are stopped or deleted via the "Cleanup" feature before starting a new one with the same IP.
-
-4. 🌐 Subnet Mask (CIDR)
-
-When defining the IP address (Frontend or API), the subnet mask is mandatory.
-
-❌ Wrong: 192.168.1.50
-
-✅ Right: 192.168.1.50/24
-
-Without the CIDR suffix, Cloud-Init will fail to configure the network interface.
-
-📂 API Documentation
-
-To keep this README clean, the detailed API requests are provided in separate files within this repository.
-
-Location
-
-Description
-
-Proxmox-Tool/
-
-This folder contains the Bruno Collection. Import it into the Bruno API Client for instant testing.
-
-Proxmox small/Befehle.txt
-
-A text file containing all Curl commands for terminal usage.
-
-⚙️ Installation & Setup
-
-It is recommended to run the application within a Python virtual environment to keep dependencies clean.
-
-1. Clone & Prepare Environment
-
+### 1. Clone & Prepare
+```bash
 git clone [https://github.com/CodeKotbes/Proxmox-Tool.git](https://github.com/CodeKotbes/Proxmox-Tool.git)
 cd Proxmox-Tool
 
 # Create Virtual Environment
 python3 -m venv venv
 
-# Activate Environment
-# On Linux/MacOS:
+# Activate (Linux/MacOS)
 source venv/bin/activate
-# On Windows:
+# Activate (Windows)
 # venv\Scripts\activate
+```
 
-
-2. Install Dependencies
-
+### 2. Install Dependencies 
+```bash
 pip install flask proxmoxer requests
+```
 
-
-3. Configuration
-
-Create a config.py file in the root directory and adapt it to your Proxmox server:
-
+### 3.Configuration 
+```python
 PROXMOX_HOST = "192.168.1.100"
 PROXMOX_USER = "root@pam"
 PROXMOX_PASSWORD = "your-password"
 NODE_NAME = "pve"        # Name of your Proxmox Node
 NAT_BRIDGE = "vmbr0"     # Your Network Bridge
+```
 
+### 4. Run
+```bash
+python3 main.py
+```
 
-4. Run the Application
-
-python Main.py
-
-
-The portal will be available at: http://<Your-Ip>:5000
+The portal will be available at: http://(Your-Ip):5000
