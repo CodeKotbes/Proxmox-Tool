@@ -97,8 +97,8 @@ Detailed API requests and collections are located in the repository:
 
 | Location | Description |
 | :--- | :--- |
-| `Proxmox-Tool/` | **Bruno Collection**: Import into [Bruno](https://www.usebruno.com/) for instant testing. |
-| `Proxmox small/Befehle.txt` | **Curl Commands**: A raw text file with Curl examples. |
+| `api-collection/` | **Bruno Collection**: Import into [Bruno](https://www.usebruno.com/) for instant testing. |
+| `api-collection/curl-examples.md` | **Curl Commands**: A curl-examples file with Curl examples. |
 
 ---
 
