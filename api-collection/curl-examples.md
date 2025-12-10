@@ -1,6 +1,6 @@
 # API Curl Examples
 
-Here are manual `curl` commands to test the Proxmox Manager API.
+Here are manual `curl` commands to test the API.
 
 **Base URL:** `http://188.34.81.134:5000`
 
@@ -10,7 +10,7 @@ Here are manual `curl` commands to test the Proxmox Manager API.
 
 ### Get Storage Info (Disk Size)
 ```bash
-curl -X GET [http://188.34.81.134:5000/api/storages](http://188.34.81.134:5000/api/storages)
+curl -X GET http://188.34.81.134:5000/api/storages
 ````
 
 ### List Snapshots of a VM
@@ -18,25 +18,25 @@ curl -X GET [http://188.34.81.134:5000/api/storages](http://188.34.81.134:5000/a
 *Replace `{vm_id}` with the actual ID.*
 
 ```bash
-curl -X GET [http://188.34.81.134:5000/api/vms/](http://188.34.81.134:5000/api/vms/){vm_id}/snapshots
+curl -X GET http://188.34.81.134:5000/api/vms/{vm_id}/snapshots
 ```
 
 ### List All Jobs
 
 ```bash
-curl -X GET [http://188.34.81.134:5000/api/jobs](http://188.34.81.134:5000/api/jobs)
+curl -X GET http://188.34.81.134:5000/api/jobs
 ```
 
 ### List Available Scripts
 
 ```bash
-curl -X GET [http://188.34.81.134:5000/api/scripts](http://188.34.81.134:5000/api/scripts)
+curl -X GET http://188.34.81.134:5000/api/scripts
 ```
 
 ### List All VMs
 
 ```bash
-curl -X GET [http://188.34.81.134:5000/api/vms](http://188.34.81.134:5000/api/vms)
+curl -X GET http://188.34.81.134:5000/api/vms
 ```
 
 -----
@@ -48,7 +48,7 @@ curl -X GET [http://188.34.81.134:5000/api/vms](http://188.34.81.134:5000/api/vm
 Creates a new template from a Cloud-Init image.
 
 ```bash
-curl -X POST [http://188.34.81.134:5000/api/template](http://188.34.81.134:5000/api/template) \
+curl -X POST http://188.34.81.134:5000/api/template \
   -H "Content-Type: application/json" \
   -d '{
     "vmid": 9000,
@@ -63,7 +63,7 @@ curl -X POST [http://188.34.81.134:5000/api/template](http://188.34.81.134:5000/
 Clones a VM from a template and configures Cloud-Init.
 
 ```bash
-curl -X POST [http://188.34.81.134:5000/api/clone](http://188.34.81.134:5000/api/clone) \
+curl -X POST http://188.34.81.134:5000/api/clone \
   -H "Content-Type: application/json" \
   -d '{
     "template_vmid": 9000,
@@ -89,7 +89,7 @@ curl -X POST [http://188.34.81.134:5000/api/clone](http://188.34.81.134:5000/api
 Deletes VMs based on tags and recreates them.
 
 ```bash
-curl -X POST [http://188.34.81.134:5000/api/redeploy](http://188.34.81.134:5000/api/redeploy) \
+curl -X POST http://188.34.81.134:5000/api/redeploy \
   -H "Content-Type: application/json" \
   -d '{
     "old_tag": "webserver",
@@ -105,7 +105,7 @@ curl -X POST [http://188.34.81.134:5000/api/redeploy](http://188.34.81.134:5000/
 Uploads new setup scripts to the database.
 
 ```bash
-curl -X POST [http://188.34.81.134:5000/api/scripts](http://188.34.81.134:5000/api/scripts) \
+curl -X POST http://188.34.81.134:5000/api/scripts \
   -H "Content-Type: application/json" \
   -d '[
     {
@@ -124,7 +124,7 @@ curl -X POST [http://188.34.81.134:5000/api/scripts](http://188.34.81.134:5000/a
 ### Create Snapshot
 
 ```bash
-curl -X POST [http://188.34.81.134:5000/api/snapshot](http://188.34.81.134:5000/api/snapshot) \
+curl -X POST http://188.34.81.134:5000/api/snapshot \
   -H "Content-Type: application/json" \
   -d '{
     "vmid": 100,
@@ -136,7 +136,7 @@ curl -X POST [http://188.34.81.134:5000/api/snapshot](http://188.34.81.134:5000/
 ### Rollback (Restore Snapshot)
 
 ```bash
-curl -X POST [http://188.34.81.134:5000/api/rollback](http://188.34.81.134:5000/api/rollback) \
+curl -X POST http://188.34.81.134:5000/api/rollback \
   -H "Content-Type: application/json" \
   -d '{
     "vmid": 100,
@@ -147,7 +147,7 @@ curl -X POST [http://188.34.81.134:5000/api/rollback](http://188.34.81.134:5000/
 ### Cleanup Zombie Processes
 
 ```bash
-curl -X POST [http://188.34.81.134:5000/api/cleanup/zombies](http://188.34.81.134:5000/api/cleanup/zombies)
+curl -X POST http://188.34.81.134:5000/api/cleanup/zombies
 ```
 
 -----
@@ -159,8 +159,5 @@ curl -X POST [http://188.34.81.134:5000/api/cleanup/zombies](http://188.34.81.13
 *Replace `{script_id}` with the actual script ID.*
 
 ```bash
-curl -X DELETE [http://188.34.81.134:5000/api/scripts/](http://188.34.81.134:5000/api/scripts/){script_id}
-```
-
-```
+curl -X DELETE http://188.34.81.134:5000/api/scripts/{script_id}
 ```
