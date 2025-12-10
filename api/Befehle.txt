@@ -74,7 +74,7 @@ curl -X POST http://188.34.81.134:5000/api/snapshot \.            //create snaps
     "name": "backup",
     "description": "Backup via API"
   }'
-
+ 
 curl -X POST http://188.34.81.134:5000/api/rollback \           //rollback 
   -H "Content-Type: application/json" \
   -d '{
